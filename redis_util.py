@@ -4,20 +4,34 @@ __author__ = 'lgx'
 import redis
 import time
 import datetime
-import json
+from conf.redis_conf import RedisConf
 
 class RedisUtil(object):
 
-    def __init__(self,db):
+    def __init__(self, db):
         self.db = db
 
-    def getRedisConnection(self):
+    def testConnection(self, host, port, password):
+        """
+        attemp connection to Redis
+        :return:Bool
+        """
+        try:
+            redis_conn = redis.Redis(host=host, port=port, password=password)
+            if redis_conn is None:
+                return False
+            return True
+        except Exception:
+            return False
+
+    def _getRedisConnection(self):
         """
         get connection of Redis
         :return:
         """
-        redisConn = redis.Redis(host='123.57.66.199', port='6379', db=self.db, password='eyuankuwant')
-        # redisConn = redis.Redis(host='127.0.0.1', port='6379', db=self.db)
+        redis_conf_info = RedisConf().read_cfg()
+        # redisConn = redis.Redis(host=redis_conf_info[0], port=redis_conf_info[1], db=self.db, password=redis_conf_info[2])
+        redisConn = redis.Redis(host=redis_conf_info[0], port=redis_conf_info[1], db=self.db)
         return redisConn
 
     def getKeyValue(self, type, key, field):
@@ -28,7 +42,7 @@ class RedisUtil(object):
         :param field:
         :return:
         """
-        redisConn = self.getRedisConnection()
+        redisConn = self._getRedisConnection()
 
         if type == 'string':
             value = redisConn.get(key)
@@ -59,7 +73,7 @@ class RedisUtil(object):
         获取当前数据库中所有的key
         :return:list
         """
-        redisConn = self.getRedisConnection()
+        redisConn = self._getRedisConnection()
 
         allKeys = redisConn.keys('*')
         key_detail_info_list = []
@@ -77,5 +91,5 @@ class RedisUtil(object):
         :param key:
         :return:
         """
-        redisConn = self.getRedisConnection()
+        redisConn = self._getRedisConnection()
         redisConn.delete(key)

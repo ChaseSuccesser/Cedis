@@ -37,7 +37,7 @@ class Main(object):
         self.db_index.set("选择数据库")
 
         self.all_db = []
-        for index in range(1,17):
+        for index in range(0,16):
             self.all_db.append(str(index))
 
         om = tk.OptionMenu(root, self.db_index, *self.all_db)
@@ -175,7 +175,7 @@ class Main(object):
                 tk.messagebox.showerror('错误', '没有连接Redis')
                 return
             for item in cache_info:
-                self.tmp_list.clear()
+                del self.tmp_list
                 self.tmp_list.append(item)       #临时保存数据
                 self.cache_info_lb.insert(tk.END, item)
 

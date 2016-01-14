@@ -14,6 +14,10 @@ class Main(object):
         pass
 
     def main_frame(self):
+        """
+        主界面
+        :return:
+        """
         root = tk.Tk()
         root.title('Cedis--Redis客户端工具')
         # root.wm_iconbitmap(os.getcwd()+'\image\\redis.ico')
@@ -21,7 +25,7 @@ class Main(object):
         #-------------------创建顶层下拉下拉菜单-------------
         top_menu = tk.Menu(root)
         option_menu = tk.Menu(top_menu, tearoff=0)
-        option_menu.add_command(label='连接', command=self.openConnDialog)
+        option_menu.add_command(label='连接', command=self.open_conn_dialog)
         option_menu.add_separator()
         option_menu.add_command(label='退出', command=root.quit)
         top_menu.add_cascade(label='选项', menu=option_menu)
@@ -60,7 +64,7 @@ class Main(object):
 
 
         #---------------------查询按钮-------------
-        button = tk.Button(root, text='查询', command=self.queryCacheInfo)
+        button = tk.Button(root, text='查询', command=self.query_cache_info)
         button.grid(row=0,column=4)
         #---------------------返回按钮-------------
         button = tk.Button(root, text='返回', command=self.back)
@@ -79,8 +83,8 @@ class Main(object):
                         xscrollcommand=listbox_scrollbar_horizontal.set)
         self.cache_info_lb.config(fg='blue')
         self.cache_info_lb.grid(row=1,column=0,columnspan=6)
-        self.cache_info_lb.bind('<<ListboxSelect>>', self.printKeyValue)
-        self.cache_info_lb.bind('<Button-3>', self.popMenu)  #绑定鼠标右键点击事件
+        self.cache_info_lb.bind('<<ListboxSelect>>', self.print_key_value)
+        self.cache_info_lb.bind('<Button-3>', self.pop_menu)  #绑定鼠标右键点击事件
 
         #---------------------配置滚动条-------------
         listbox_scrollbar_vertical['command'] = self.cache_info_lb.yview
@@ -89,13 +93,14 @@ class Main(object):
 
         #---------------------创建鼠标右键菜单-------------
         self.right_click_menu = tk.Menu(root, tearoff=0)
-        self.right_click_menu.add_command(label="删除", command=self.deleteItem)
+        self.right_click_menu.add_command(label="删除", command=self.delete_item)
 
 
 
         tk.Label(root, text='详细信息').grid(row=0,column=7,columnspan=3)
 
-        tk.Button(root, text='json格式化', fg='blue', command=self.jsonPretty).grid(row=0, column=10, sticky=tk.E)
+        json_pretty_button = tk.Button(root, text='json格式化', fg='blue', command=self.json_pretty)
+        json_pretty_button.grid(row=0, column=10, sticky=tk.E)
 
         #---------------------创建滚动条-------------
         text_scrollbar_vertical = tk.Scrollbar(root, orient=tk.VERTICAL)
@@ -129,7 +134,7 @@ class Main(object):
 
     tmp_list = []  #作用是临时保存数据
 
-    def queryCacheInfo(self):
+    def query_cache_info(self):
         """
         按查询条件查询缓存
         :return:
@@ -143,30 +148,39 @@ class Main(object):
         query_condition_value = self.input_value.get()
         type_variable_value = self.type_variable.get()
 
-        self.cache_content_text.delete('1.0',tk.END)
+        self.cache_content_text.delete('1.0', tk.END)
         self.cache_info_lb.delete(0,tk.END)
 
         #2.按指定的key类型和key名称查询数据
-        if type_variable_value in ['string','list','set','hash'] and self.checkNone(query_condition_value):
-            cache_info = redis.getKeyValue(type_variable_value, query_condition_value, None)
+        if type_variable_value in ['string','list','set','hash'] and \
+                self.check_none(query_condition_value):
+            try:
+                cache_info = redis.get_key_value(type_variable_value, query_condition_value, None)
+            except ConnectionError:
+                tk.messagebox.showerror('错误', '没有连接Redis')
+                return
 
             #如果数据类型是hash或者set，则在Listbox中显示hash或set的所有field
             if type_variable_value in ['hash','set']:
-                self.fillinListbox(type_variable_value, query_condition_value, cache_info)
+                self.fillin_listbox(type_variable_value, query_condition_value, cache_info)
                 return
             #如果数据类型是string，则在Text中显示key的值
             self.cache_content_text.insert(tk.INSERT, str(cache_info))
 
         #1.查询当前数据库中所有的key信息：key名称、key类型、key超时时间，在Listbox组件显示
         elif type_variable_value=='选择数据类型':
-            cache_info = redis.getAllKeys()
+            try:
+                cache_info = redis.get_all_keys()
+            except ConnectionError:
+                tk.messagebox.showerror('错误', '没有连接Redis')
+                return
             for item in cache_info:
                 self.tmp_list.clear()
                 self.tmp_list.append(item)       #临时保存数据
                 self.cache_info_lb.insert(tk.END, item)
 
 
-    def printKeyValue(self,event):
+    def print_key_value(self,event):
         """
         点击Listbox组件中一条缓存条目，查看对应数据
         :param event:
@@ -184,25 +198,37 @@ class Main(object):
 
         #如果数据类型是hash或者set，则在Listbox中显示hash或set的所有field
         if key_type in ['hash','set']:
-            cache_info = redis.getKeyValue(key_type, key_id, None)
-            self.fillinListbox(key_type, key_id, cache_info)
+            try:
+                cache_info = redis.get_key_value(key_type, key_id, None)
+            except ConnectionError:
+                tk.messagebox.showerror('错误', '没有连接Redis')
+                return
+            self.fillin_listbox(key_type, key_id, cache_info)
         elif key_type in ['string','list','hash_field','set_field']:
-            key_value = redis.getKeyValue(key_type, key_id, third_value)
+            try:
+                key_value = redis.get_key_value(key_type, key_id, third_value)
+            except ConnectionError:
+                tk.messagebox.showerror('错误', '没有连接Redis')
+                return
             self.cache_content_text.insert(tk.INSERT, str(key_value))
 
 
-    def fillinListbox(self, type_variable_value, query_condition_value, cache_info):
+    def fillin_listbox(self, type_variable_value, query_condition_value, cache_info):
         if type_variable_value == 'hash':
             self.cache_info_lb.delete(0,tk.END)
             for hash_field_item in cache_info:
-                self.cache_info_lb.insert(tk.END, query_condition_value+'   '+'hash_field   '+hash_field_item)
+                self.cache_info_lb.insert(tk.END, query_condition_value+'   '+
+                                                  'hash_field   '+
+                                                  hash_field_item)
         elif type_variable_value == 'set':
             self.cache_info_lb.delete(0,tk.END)
             for set_field_item in cache_info:
-                self.cache_info_lb.insert(tk.END, query_condition_value+'   '+'set_field   '+set_field_item)
+                self.cache_info_lb.insert(tk.END, query_condition_value+'   '+
+                                                  'set_field   '+
+                                                  set_field_item)
 
 
-    def deleteItem(self):
+    def delete_item(self):
         """
         删除缓存
         :return:
@@ -214,14 +240,17 @@ class Main(object):
             re_result = tk.messagebox.askquestion('删除', '你刚才点了删除，真的要删除吗?', icon='warning')
             if re_result == 'yes':
                 redis = RedisUtil(int(self.db_index.get()))
-                redis.delKey(key_id)
+                try:
+                    redis.del_key(key_id)
+                except ConnectionError:
+                    tk.messagebox.showerror('错误', '没有连接Redis')
             else:
                 pass
         else:
             pass
 
 
-    def jsonPretty(self):
+    def json_pretty(self):
         """
         如果Text组件的内容是json，则美化它
         :return:None
@@ -247,7 +276,7 @@ class Main(object):
                 self.cache_info_lb.insert(tk.END, item)
 
 
-    def popMenu(self, event):
+    def pop_menu(self, event):
         """
         鼠标右键点击Listbox，弹出菜单
         :param event:
@@ -261,55 +290,56 @@ class Main(object):
         port = self.port_value.get()
         password = self.password_value.get()
 
-        print(env+'  '+host+'  '+port+'  '+password)
-
         is_Connection_success = RedisUtil(None).testConnection(host=host, port=port, password=password)
         if is_Connection_success:
-            RedisConf().write_cfg(env=env, host=host, port=port, password=password)
+            self.top_level.destroy()      #销毁Toplevel窗口
+            conf_file_path = os.getcwd()+'\\conf\\redis_conf.cfg'
+            RedisConf().write_cfg(file_path=conf_file_path, env=env, host=host,
+                                  port=port, password=password)
             tk.messagebox.showinfo('连接成功', '连接Redis成功!')
         else:
             tk.messagebox.showwarning('连接失败', '连接Redis失败!')
 
-    def openConnDialog(self):
-        top_level = tk.Toplevel()
-        top_level.geometry('200x140')
-        top_level.title('连接Redis')
+    def open_conn_dialog(self):
+        self.top_level = tk.Toplevel()
+        self.top_level.geometry('200x140')
+        self.top_level.title('连接Redis')
 
-        env_label = tk.Label(top_level, text='Env')
+        env_label = tk.Label(self.top_level, text='Env')
         env_label.grid(row=0, column=0, sticky=tk.W+tk.N+tk.S)
 
         self.env_value = tk.StringVar()
-        env_input = tk.Entry(top_level, textvariable=self.env_value)
+        env_input = tk.Entry(self.top_level, textvariable=self.env_value)
         env_input.grid(row=0, column=1)
 
-        host_label = tk.Label(top_level, text='Host')
+        host_label = tk.Label(self.top_level, text='Host')
         host_label.grid(row=1, column=0, sticky=tk.W+tk.N+tk.S)
 
         self.host_value = tk.StringVar()
-        host_input = tk.Entry(top_level, textvariable=self.host_value)
+        host_input = tk.Entry(self.top_level, textvariable=self.host_value)
         host_input.grid(row=1, column=1)
 
-        port_label = tk.Label(top_level, text='Port')
+        port_label = tk.Label(self.top_level, text='Port')
         port_label.grid(row=2, column=0, sticky=tk.W+tk.N+tk.S)
 
         self.port_value = tk.StringVar()
-        port_input = tk.Entry(top_level, textvariable=self.port_value)
+        port_input = tk.Entry(self.top_level, textvariable=self.port_value)
         port_input.grid(row=2, column=1)
 
-        password_lable = tk.Label(top_level, text='Password')
+        password_lable = tk.Label(self.top_level, text='Password')
         password_lable.grid(row=3, column=0, sticky=tk.W+tk.N+tk.S)
 
         self.password_value = tk.StringVar()
-        password_input = tk.Entry(top_level, textvariable=self.password_value)
+        password_input = tk.Entry(self.top_level, textvariable=self.password_value)
         password_input.grid(row=3, column=1)
 
-        ok = tk.Button(top_level, text='连接', command=self.conn_redis)
+        ok = tk.Button(self.top_level, text='连接', command=self.conn_redis)
         ok.grid(row=4,column=1)
 
-        top_level.focus_set()
+        self.top_level.focus_set()
 
 
-    def checkNone(self, str):
+    def check_none(self, str):
         return (len(str)!=0 and str is not None)
 
 

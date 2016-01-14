@@ -8,8 +8,7 @@ class RedisConf(object):
     def __init__(self):
         pass
 
-    def write_cfg(self, env, host, port, password):
-        folder_path = os.getcwd()+'\\redis_conf.cfg'
+    def write_cfg(self, file_path, env, host, port, password):
         conf = configparser.ConfigParser()
 
         conf.add_section(env)
@@ -17,14 +16,17 @@ class RedisConf(object):
         conf.set(env, 'port', port)
         conf.set(env, 'password', password)
 
-        conf.write(open(folder_path, 'w'))
+        conf.write(open(file_path, 'w'))
 
-    def read_cfg(self):
-        folder_path = os.getcwd()+'\\redis_conf.cfg'
+    def read_cfg(self, file_path):
         conf = configparser.ConfigParser()
-        conf.read(folder_path)
+        conf.read(file_path)
 
-        env = conf.sections()[0]
+        env_list = conf.sections()
+        if env_list is None or len(env_list) == 0:
+            return None
+        else:
+            env = env_list[0]
         host = conf.get(env, 'host')
         port = conf.get(env, 'port')
         password = conf.get(env, 'password')

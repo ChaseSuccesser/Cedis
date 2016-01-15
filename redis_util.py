@@ -76,6 +76,19 @@ class RedisUtil(object):
         elif type == 'set_field':
             return '没有API支持从set集合中按指定的field获取value.'
 
+    def get_key_info(self, key):
+        redis_conn = self._getRedisConnection()
+        if redis_conn is None:
+            raise ConnectionError
+
+        if key is not None and len(key)>0:
+            key_expire_time = datetime.datetime.fromtimestamp(int(time.time())+redis_conn.ttl(key))\
+                             .strftime('%Y-%m-%d %H:%M:%S') if redis_conn.ttl(key) is not None else ''
+            key_type = redis_conn.type(key).decode('utf-8')
+            return (key_type, key_expire_time)
+        else:
+            return None
+
 
     def get_all_keys(self):
         """
@@ -90,7 +103,8 @@ class RedisUtil(object):
         key_detail_info_list = []
         format = '%Y-%m-%d %H:%M:%S'
         for key in allKeys:
-            key_expire_time = datetime.datetime.fromtimestamp(int(time.time())+redis_conn.ttl(key)).strftime(format) if redis_conn.ttl(key) is not None else ''
+            key_expire_time = datetime.datetime.fromtimestamp(int(time.time())+redis_conn.ttl(key))\
+                             .strftime(format) if redis_conn.ttl(key) is not None else ''
             key_type = redis_conn.type(key).decode('utf-8')
             key_detail_info_list.append(key.decode('utf-8')+'   '+key_type+'   超时时间:'+key_expire_time)
         return key_detail_info_list
@@ -105,4 +119,5 @@ class RedisUtil(object):
         redis_conn = self._getRedisConnection()
         if redis_conn is None:
             raise ConnectionError
+
         redis_conn.delete(key)

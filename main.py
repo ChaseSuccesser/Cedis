@@ -145,26 +145,35 @@ class Main(object):
             tk.messagebox.showerror('错误', '参数不正确：没有选择数据库')
             return
 
-        query_condition_value = self.input_value.get()
         type_variable_value = self.type_variable.get()
+        query_condition_key = self.input_value.get()
 
         self.cache_content_text.delete('1.0', tk.END)
         self.cache_info_lb.delete(0,tk.END)
 
         #2.按指定的key类型和key名称查询数据
         if type_variable_value in ['string','list','set','hash'] and \
-                self.check_none(query_condition_value):
+                self.check_none(query_condition_key):
             try:
-                cache_info = redis.get_key_value(type_variable_value, query_condition_value, None)
+                cache_info = redis.get_key_value(type_variable_value, query_condition_key, None)
             except ConnectionError:
                 tk.messagebox.showerror('错误', '没有连接Redis')
                 return
 
             #如果数据类型是hash或者set，则在Listbox中显示hash或set的所有field
             if type_variable_value in ['hash','set']:
-                self.fillin_listbox(type_variable_value, query_condition_value, cache_info)
+                self.fillin_listbox(type_variable_value, query_condition_key, cache_info)
                 return
-            #如果数据类型是string，则在Text中显示key的值
+
+            #如果数据类型是string，则在Text中显示value,在Listbox中显示key
+            self.cache_info_lb.delete(0,tk.END)
+            try:
+                key_info_tuple = redis.get_key_info(query_condition_key)
+                result = query_condition_key+'   '+type_variable_value+'   超时时间:'+key_info_tuple[1]
+            except ConnectionError:
+                tk.messagebox.showerror('错误', '没有连接Redis')
+                return
+            self.cache_info_lb.insert(tk.END, result)
             self.cache_content_text.insert(tk.INSERT, str(cache_info))
 
         #1.查询当前数据库中所有的key信息：key名称、key类型、key超时时间，在Listbox组件显示
@@ -174,8 +183,9 @@ class Main(object):
             except ConnectionError:
                 tk.messagebox.showerror('错误', '没有连接Redis')
                 return
+
             for item in cache_info:
-                del self.tmp_list
+                self.tmp_list.clear()
                 self.tmp_list.append(item)       #临时保存数据
                 self.cache_info_lb.insert(tk.END, item)
 
@@ -213,17 +223,24 @@ class Main(object):
             self.cache_content_text.insert(tk.INSERT, str(key_value))
 
 
-    def fillin_listbox(self, type_variable_value, query_condition_value, cache_info):
+    def fillin_listbox(self, type_variable_value, query_condition_key, cache_info):
+        """
+        将hash/set集合中的key在Listbox中显示
+        :param type_variable_value:
+        :param query_condition_key:
+        :param cache_info:
+        :return:
+        """
         if type_variable_value == 'hash':
             self.cache_info_lb.delete(0,tk.END)
             for hash_field_item in cache_info:
-                self.cache_info_lb.insert(tk.END, query_condition_value+'   '+
+                self.cache_info_lb.insert(tk.END, query_condition_key+'   '+
                                                   'hash_field   '+
                                                   hash_field_item)
         elif type_variable_value == 'set':
             self.cache_info_lb.delete(0,tk.END)
             for set_field_item in cache_info:
-                self.cache_info_lb.insert(tk.END, query_condition_value+'   '+
+                self.cache_info_lb.insert(tk.END, query_condition_key+'   '+
                                                   'set_field   '+
                                                   set_field_item)
 
@@ -344,4 +361,4 @@ class Main(object):
 
 
 if __name__ == '__main__':
-    main = Main().main_frame()
+    Main().main_frame()

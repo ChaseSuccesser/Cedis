@@ -27,6 +27,7 @@ class RedisConf(object):
             return None
         else:
             env = env_list[0]
+
         host = conf.get(env, 'host')
         port = conf.get(env, 'port')
         password = conf.get(env, 'password')

@@ -33,9 +33,9 @@ class RedisUtil(object):
         redis_conf_info = RedisConf().read_cfg(file_path)
 
         if redis_conf_info is not None:
-            redisConn = redis.Redis(host=redis_conf_info[0], port=redis_conf_info[1],
-                                    db=self.db, password=redis_conf_info[2])
-            # redisConn = redis.Redis(host=redis_conf_info[0], port=redis_conf_info[1], db=self.db)
+            # redisConn = redis.Redis(host=redis_conf_info[0], port=redis_conf_info[1],
+            #                         db=self.db, password=redis_conf_info[2])
+            redisConn = redis.Redis(host=redis_conf_info[0], port=redis_conf_info[1], db=self.db)
             return redisConn
         else:
             return None
